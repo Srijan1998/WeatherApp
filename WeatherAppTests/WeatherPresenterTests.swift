@@ -9,7 +9,7 @@ import XCTest
 
 @testable import WeatherApp
 
-class WeatherPresenterTests: XCTestCase {
+class WeatherPresenterTests: BaseApiMethods {
     
     var weatherPresenter: WeatherPresenter?
     var weatherPresenterSpyDelegate: WeatherPresenterSpyDelegate?
@@ -24,14 +24,6 @@ class WeatherPresenterTests: XCTestCase {
     
     private func getDelegateExpectation() -> XCTestExpectation {
         return expectation(description: "Delegate Called")
-    }
-    
-    private func waitForExpectationsWithTimeout(_ timeout: TimeInterval) {
-        waitForExpectations(timeout: timeout) { error in
-             if let error = error {
-               XCTFail("waitForExpectationsWithTimeout errored: \(error)")
-             }
-           }
     }
     
     private func setUpWeatherPresenterSpyDelegate() {
@@ -50,5 +42,34 @@ class WeatherPresenterTests: XCTestCase {
         }
         XCTAssertTrue(result)
     }
+    
+    func testRightTemperature() {
+        self.setUpWeatherPresenterSpyDelegate()
+        self.weatherPresenter?.getTemperatureForPlace("Delhi")
+        self.waitForExpectationsWithTimeout(2)
+        var temp: String = ""
+        let exp = self.getCallbackCalledExpectation()
+        self.getTemperature { (weatherModel) in
+            temp = weatherModel.temp
+            exp.fulfill()
+        }
+        self.waitForExpectationsWithTimeout(2)
+        guard let temperature = self.weatherPresenterSpyDelegate?.temperature else {
+            XCTFail("Delegate not called")
+            return
+        }
+        XCTAssertEqual(temp, temperature)
+    }
+    
+    func getTemperature(closure: @escaping (WeatherModel) -> Void) {
+        
+        let apiCaller = WeatherApiCaller(baseURL: UtilityMethods.getBaseURL())
+        let arguments = UtilityMethods.getDelhiArguments()
+        let callback: (WeatherModel) -> Void = {weatherModel in
+            closure(weatherModel)
+        }
+        apiCaller.getWeatherModel(arguments: arguments, closure: callback)
+    }
+
 
 }
